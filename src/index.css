@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0a0a0a;
+  --text: #ffffff;
+  --accent: #00ff00;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.anonymous-gradient {
+  background: linear-gradient(180deg, rgba(0,255,0,0.1) 0%, rgba(0,0,0,1) 100%);
+}
+
+.terminal-card {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 1rem;
+}
