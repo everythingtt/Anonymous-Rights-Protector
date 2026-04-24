@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Since the dashboard is at the root of the repository/domain, base should be '/'
-  base: '/',
+  // Fixed base path for subdirectory deployment on GitHub Pages
+  base: '/Anonymous-Rights-Protector/',
   build: {
     outDir: 'dist',
   }
