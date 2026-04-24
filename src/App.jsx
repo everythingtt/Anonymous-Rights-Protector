@@ -1,17 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Lock, Terminal, Activity, Users, AlertTriangle } from 'lucide-react';
+import { io } from 'socket.io-client';
 
 import banner from './assets/anonymous-banner.jpg';
 import emblem from './assets/anonymous-emblem.png';
 
+// Connect to the local backend (proxied via Nginx in production)
+const socket = io(window.location.origin, {
+  path: '/socket.io/'
+});
+
 function App() {
-  const [status, setStatus] = useState('Online');
+  const [status, setStatus] = useState('Offline');
   const [stats, setStats] = useState({
-    protected: 124,
-    blocked: 12,
-    proxied: 45,
-    users: 890
+    protected: 0,
+    blocked: 0,
+    proxied: 0,
+    users: 0
   });
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    socket.on('connect', () => {
+      setStatus('Online');
+      addLog({ time: new Date().toLocaleTimeString(), msg: 'Connected to Security Engine', type: 'success' });
+    });
+
+    socket.on('disconnect', () => {
+      setStatus('Offline');
+      addLog({ time: new Date().toLocaleTimeString(), msg: 'Lost connection to Security Engine', type: 'danger' });
+    });
+
+    socket.on('stats', (newStats) => {
+      setStats(newStats);
+    });
+
+    socket.on('log', (log) => {
+      addLog(log);
+    });
+
+    return () => {
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('stats');
+      socket.off('log');
+    };
+  }, []);
+
+  const addLog = (log) => {
+    setLogs(prev => [log, ...prev].slice(0, 50));
+  };
 
   return (
     <div className="min-h-screen bg-black text-white font-mono flex flex-col items-center">
@@ -32,13 +70,13 @@ function App() {
               <Shield className="text-green-500 w-8 h-8" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tighter">ANONYMOUS RIGHTS PROTECTOR</h1>
+              <h1 className="text-2xl font-bold tracking-tighter uppercase">Anonymous Rights Protector</h1>
               <p className="text-xs text-green-500/60 uppercase tracking-widest">Privacy & Security First</p>
             </div>
           </div>
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-green-500 uppercase">{status}</span>
+            <div className={`w-2 h-2 rounded-full animate-pulse ${status === 'Online' ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className={`text-xs font-bold uppercase ${status === 'Online' ? 'text-green-500' : 'text-red-500'}`}>{status}</span>
           </div>
         </header>
 
@@ -55,20 +93,20 @@ function App() {
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 h-[400px] flex flex-col">
             <div className="flex items-center gap-2 mb-4 text-zinc-500 text-xs uppercase font-bold tracking-widest">
               <Terminal size={14} />
-              System Logs
+              Live Security Feed
             </div>
-            <div className="flex-1 overflow-y-auto space-y-2 text-xs">
-              <LogEntry time="15:42:01" msg="AI analysis completed for user ID: 303...772" type="info" />
-              <LogEntry time="15:42:05" msg="Flagged 'goonable' as slang. Proxying message..." type="warning" />
-              <LogEntry time="15:42:05" msg="Webhook proxy successful." type="success" />
-              <LogEntry time="15:43:12" msg="Phishing link detected and neutralized." type="danger" />
-              <LogEntry time="15:45:00" msg="TCP Heartbeat received." type="info" />
+            <div className="flex-1 overflow-y-auto space-y-2 text-xs scrollbar-hide">
+              {logs.length > 0 ? logs.map((log, i) => (
+                <LogEntry key={i} time={log.time} msg={log.msg} type={log.type} />
+              )) : (
+                <div className="text-zinc-700 animate-pulse italic">Waiting for incoming data...</div>
+              )}
             </div>
           </div>
 
           {/* Action Panel */}
           <div className="md:col-span-3 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 mt-6">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2 uppercase">
               <Activity className="text-green-500" />
               Active Protections
             </h2>
