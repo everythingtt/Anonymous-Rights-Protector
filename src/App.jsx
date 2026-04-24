@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Lock, Terminal, Activity, Users, AlertTriangle, Link as LinkIcon } from 'lucide-react';
+import { Shield, Lock, Terminal, Activity, Users, AlertTriangle, Link as LinkIcon, Wifi, WifiOff } from 'lucide-react';
 import { io } from 'socket.io-client';
 
 import banner from './assets/anonymous-banner.jpg';
 import emblem from './assets/anonymous-emblem.png';
 
+// Fallback for local testing
+const LOCAL_BACKEND = "http://localhost:3000";
+
 function App() {
-  const [status, setStatus] = useState('Offline');
+  const [status, setStatus] = useState('Connecting...');
   const [stats, setStats] = useState({
     protected: 0,
     blocked: 0,
@@ -15,44 +18,88 @@ function App() {
   });
   const [logs, setLogs] = useState([]);
   const [publicUrl, setPublicUrl] = useState(null);
+  const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    // Check if we have a public URL in the logs or from a known source
-    // For now, we connect to the current origin, which Nginx or Ngrok will handle
-    const socket = io(window.location.origin, {
-      path: '/socket.io/'
-    });
+    // 1. Try to determine where to connect
+    // If we are on localhost, connect to current origin
+    // If we are on GitHub Pages, we need to know the Ngrok URL
+    // We'll use a simple "discovery" mechanism: check if we're on local or remote
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    let socketInstance;
 
-    socket.on('connect', () => {
-      setStatus('Online');
-      addLog({ time: new Date().toLocaleTimeString(), msg: 'Connected to Security Engine', type: 'success' });
-    });
-
-    socket.on('disconnect', () => {
-      setStatus('Offline');
-      addLog({ time: new Date().toLocaleTimeString(), msg: 'Lost connection to Security Engine', type: 'danger' });
-    });
-
-    socket.on('stats', (newStats) => {
-      setStats(newStats);
-    });
-
-    socket.on('log', (log) => {
-      addLog(log);
-      // Extract Ngrok URL from logs if it appears
-      if (log.msg.includes('Dashboard API is public:')) {
-        const url = log.msg.split('public: ')[1];
-        setPublicUrl(url);
+    if (isLocal) {
+      console.log("Local environment detected. Connecting to origin.");
+      socketInstance = io(window.location.origin, { path: '/socket.io/' });
+      setupSocket(socketInstance);
+    } else {
+      // On GitHub Pages, we prompt for the Ngrok URL or look for it in localStorage
+      const savedUrl = localStorage.getItem('ANONY_NGROK_URL');
+      if (savedUrl) {
+        console.log("Connecting to saved Ngrok URL:", savedUrl);
+        socketInstance = io(savedUrl, { path: '/socket.io/' });
+        setupSocket(socketInstance);
+        setPublicUrl(savedUrl);
+      } else {
+        setStatus('Configuration Required');
+        addLog({ 
+          time: new Date().toLocaleTimeString(), 
+          msg: 'GitHub Pages detected. Please provide your public Ngrok URL from your local terminal to sync data.', 
+          type: 'warning' 
+        });
       }
-    });
+    }
+
+    function setupSocket(s) {
+      s.on('connect', () => {
+        setStatus('Online');
+        addLog({ time: new Date().toLocaleTimeString(), msg: 'Secure Tunnel Established', type: 'success' });
+        // Save for next session if successful
+        if (!isLocal) localStorage.setItem('ANONY_NGROK_URL', s.io.uri);
+      });
+
+      s.on('disconnect', () => {
+        setStatus('Offline');
+        addLog({ time: new Date().toLocaleTimeString(), msg: 'Lost connection to Security Engine', type: 'danger' });
+      });
+
+      s.on('stats', (newStats) => {
+        setStats(newStats);
+      });
+
+      s.on('log', (log) => {
+        addLog(log);
+      });
+
+      setSocket(s);
+    }
 
     return () => {
-      socket.disconnect();
+      if (socketInstance) socketInstance.disconnect();
     };
   }, []);
 
   const addLog = (log) => {
     setLogs(prev => [log, ...prev].slice(0, 50));
+  };
+
+  const handleConnectRemote = () => {
+    const url = prompt("Enter your Public Dashboard API URL (from your local start.js logs):");
+    if (url) {
+      if (socket) socket.disconnect();
+      const s = io(url, { path: '/socket.io/' });
+      setSocket(s);
+      // Logic from setupSocket repeated here for simplicity in this manual override
+      s.on('connect', () => {
+        setStatus('Online');
+        setPublicUrl(url);
+        localStorage.setItem('ANONY_NGROK_URL', url);
+        addLog({ time: new Date().toLocaleTimeString(), msg: 'Manual Tunnel Established', type: 'success' });
+      });
+      s.on('stats', setStats);
+      s.on('log', addLog);
+    }
   };
 
   return (
@@ -83,12 +130,13 @@ function App() {
               <div className={`w-2 h-2 rounded-full animate-pulse ${status === 'Online' ? 'bg-green-500' : 'bg-red-500'}`} />
               <span className={`text-xs font-bold uppercase ${status === 'Online' ? 'text-green-500' : 'text-red-500'}`}>{status}</span>
             </div>
-            {publicUrl && (
-              <div className="flex items-center gap-2 text-[10px] text-green-500/40 uppercase tracking-tighter">
-                <LinkIcon size={10} />
-                Public Endpoint Active
-              </div>
-            )}
+            <button 
+              onClick={handleConnectRemote}
+              className="flex items-center gap-2 text-[10px] text-green-500/40 hover:text-green-500 uppercase tracking-tighter transition-colors"
+            >
+              {publicUrl ? <Wifi size={10} /> : <WifiOff size={10} />}
+              {publicUrl ? 'Tunnel Active' : 'Sync Remote Tunnel'}
+            </button>
           </div>
         </header>
 
@@ -111,7 +159,7 @@ function App() {
               {logs.length > 0 ? logs.map((log, i) => (
                 <LogEntry key={i} time={log.time} msg={log.msg} type={log.type} />
               )) : (
-                <div className="text-zinc-700 animate-pulse italic">Awaiting public secure tunnel...</div>
+                <div className="text-zinc-700 animate-pulse italic">Awaiting secure tunnel handshake...</div>
               )}
             </div>
           </div>
