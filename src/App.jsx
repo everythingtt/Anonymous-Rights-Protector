@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Lock, Terminal, Activity, Users, AlertTriangle } from 'lucide-react';
 
+import banner from './assets/anonymous-banner.jpg';
+import emblem from './assets/anonymous-emblem.png';
+
 function App() {
   const [status, setStatus] = useState('Online');
   const [stats, setStats] = useState({
@@ -11,66 +14,77 @@ function App() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-white font-mono p-4 md:p-8">
-      {/* Header */}
-      <header className="max-w-6xl mx-auto flex justify-between items-center mb-12 border-b border-green-900/30 pb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-green-500/10 rounded-lg">
-            <Shield className="text-green-500 w-8 h-8" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tighter">ANONYMOUS RIGHTS PROTECTOR</h1>
-            <p className="text-xs text-green-500/60 uppercase tracking-widest">Privacy & Security First</p>
-          </div>
+    <div className="min-h-screen bg-black text-white font-mono flex flex-col items-center">
+      {/* Hero Banner */}
+      <div className="w-full h-48 md:h-64 overflow-hidden relative border-b border-green-900/30">
+        <img src={banner} alt="Anonymous Banner" className="w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
+          <img src={emblem} alt="Emblem" className="w-16 h-16 md:w-20 md:h-20 drop-shadow-[0_0_15px_rgba(0,255,0,0.5)]" />
         </div>
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-xs font-bold text-green-500 uppercase">{status}</span>
-        </div>
-      </header>
+      </div>
 
-      <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Stats Section */}
-        <div className="md:col-span-2 grid grid-cols-2 gap-4">
-          <StatCard icon={<Shield />} label="Messages Protected" value={stats.protected} color="green" />
-          <StatCard icon={<Lock />} label="Privacy Proxied" value={stats.proxied} color="blue" />
-          <StatCard icon={<AlertTriangle />} label="Malicious Blocked" value={stats.blocked} color="red" />
-          <StatCard icon={<Users />} label="Active Users" value={stats.users} color="purple" />
-        </div>
-
-        {/* Terminal/Logs */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 h-[400px] flex flex-col">
-          <div className="flex items-center gap-2 mb-4 text-zinc-500 text-xs uppercase font-bold tracking-widest">
-            <Terminal size={14} />
-            System Logs
+      <div className="w-full max-w-6xl p-4 md:p-8">
+        {/* Header */}
+        <header className="flex justify-between items-center mb-12 border-b border-green-900/30 pb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-500/10 rounded-lg">
+              <Shield className="text-green-500 w-8 h-8" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tighter">ANONYMOUS RIGHTS PROTECTOR</h1>
+              <p className="text-xs text-green-500/60 uppercase tracking-widest">Privacy & Security First</p>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto space-y-2 text-xs">
-            <LogEntry time="15:42:01" msg="AI analysis completed for user ID: 303...772" type="info" />
-            <LogEntry time="15:42:05" msg="Flagged 'goonable' as slang. Proxying message..." type="warning" />
-            <LogEntry time="15:42:05" msg="Webhook proxy successful." type="success" />
-            <LogEntry time="15:43:12" msg="Phishing link detected and neutralized." type="danger" />
-            <LogEntry time="15:45:00" msg="TCP Heartbeat received." type="info" />
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-green-500 uppercase">{status}</span>
           </div>
-        </div>
+        </header>
 
-        {/* Action Panel */}
-        <div className="md:col-span-3 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 mt-6">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <Activity className="text-green-500" />
-            Active Protections
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <ProtectionToggle label="NSFW/CSAM Filter" active={true} />
-            <ProtectionToggle label="Phishing Shield" active={true} />
-            <ProtectionToggle label="Webhook Proxy" active={true} />
-            <ProtectionToggle label="AI Context Analysis" active={true} />
+        <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Stats Section */}
+          <div className="md:col-span-2 grid grid-cols-2 gap-4">
+            <StatCard icon={<Shield />} label="Messages Protected" value={stats.protected} color="green" />
+            <StatCard icon={<Lock />} label="Privacy Proxied" value={stats.proxied} color="blue" />
+            <StatCard icon={<AlertTriangle />} label="Malicious Blocked" value={stats.blocked} color="red" />
+            <StatCard icon={<Users />} label="Active Users" value={stats.users} color="purple" />
           </div>
-        </div>
-      </main>
 
-      <footer className="max-w-6xl mx-auto mt-12 text-center text-zinc-600 text-[10px] uppercase tracking-widest">
-        Built for User Freedom • No Logs Kept • Decentralized Infrastructure
-      </footer>
+          {/* Terminal/Logs */}
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 h-[400px] flex flex-col">
+            <div className="flex items-center gap-2 mb-4 text-zinc-500 text-xs uppercase font-bold tracking-widest">
+              <Terminal size={14} />
+              System Logs
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2 text-xs">
+              <LogEntry time="15:42:01" msg="AI analysis completed for user ID: 303...772" type="info" />
+              <LogEntry time="15:42:05" msg="Flagged 'goonable' as slang. Proxying message..." type="warning" />
+              <LogEntry time="15:42:05" msg="Webhook proxy successful." type="success" />
+              <LogEntry time="15:43:12" msg="Phishing link detected and neutralized." type="danger" />
+              <LogEntry time="15:45:00" msg="TCP Heartbeat received." type="info" />
+            </div>
+          </div>
+
+          {/* Action Panel */}
+          <div className="md:col-span-3 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 mt-6">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Activity className="text-green-500" />
+              Active Protections
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <ProtectionToggle label="NSFW/CSAM Filter" active={true} />
+              <ProtectionToggle label="Phishing Shield" active={true} />
+              <ProtectionToggle label="Webhook Proxy" active={true} />
+              <ProtectionToggle label="AI Context Analysis" active={true} />
+            </div>
+          </div>
+        </main>
+
+        <footer className="w-full max-w-6xl mt-12 text-center text-zinc-600 text-[10px] uppercase tracking-widest pb-8">
+          Built for User Freedom • No Logs Kept • Decentralized Infrastructure
+        </footer>
+      </div>
     </div>
   );
 }
