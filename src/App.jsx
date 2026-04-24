@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Lock, Terminal, Activity, Users, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, Terminal, Activity, Users, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { io } from 'socket.io-client';
 
 import banner from './assets/anonymous-banner.jpg';
 import emblem from './assets/anonymous-emblem.png';
-
-// Connect to the local backend (proxied via Nginx in production)
-const socket = io(window.location.origin, {
-  path: '/socket.io/'
-});
 
 function App() {
   const [status, setStatus] = useState('Offline');
@@ -19,8 +14,15 @@ function App() {
     users: 0
   });
   const [logs, setLogs] = useState([]);
+  const [publicUrl, setPublicUrl] = useState(null);
 
   useEffect(() => {
+    // Check if we have a public URL in the logs or from a known source
+    // For now, we connect to the current origin, which Nginx or Ngrok will handle
+    const socket = io(window.location.origin, {
+      path: '/socket.io/'
+    });
+
     socket.on('connect', () => {
       setStatus('Online');
       addLog({ time: new Date().toLocaleTimeString(), msg: 'Connected to Security Engine', type: 'success' });
@@ -37,13 +39,15 @@ function App() {
 
     socket.on('log', (log) => {
       addLog(log);
+      // Extract Ngrok URL from logs if it appears
+      if (log.msg.includes('Dashboard API is public:')) {
+        const url = log.msg.split('public: ')[1];
+        setPublicUrl(url);
+      }
     });
 
     return () => {
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.off('stats');
-      socket.off('log');
+      socket.disconnect();
     };
   }, []);
 
@@ -70,13 +74,21 @@ function App() {
               <Shield className="text-green-500 w-8 h-8" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tighter uppercase">Anonymous Rights Protector</h1>
+              <h1 className="text-2xl font-bold tracking-tighter uppercase text-green-500">Anonymous Rights Protector</h1>
               <p className="text-xs text-green-500/60 uppercase tracking-widest">Privacy & Security First</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-            <div className={`w-2 h-2 rounded-full animate-pulse ${status === 'Online' ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className={`text-xs font-bold uppercase ${status === 'Online' ? 'text-green-500' : 'text-red-500'}`}>{status}</span>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+              <div className={`w-2 h-2 rounded-full animate-pulse ${status === 'Online' ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className={`text-xs font-bold uppercase ${status === 'Online' ? 'text-green-500' : 'text-red-500'}`}>{status}</span>
+            </div>
+            {publicUrl && (
+              <div className="flex items-center gap-2 text-[10px] text-green-500/40 uppercase tracking-tighter">
+                <LinkIcon size={10} />
+                Public Endpoint Active
+              </div>
+            )}
           </div>
         </header>
 
@@ -90,7 +102,7 @@ function App() {
           </div>
 
           {/* Terminal/Logs */}
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 h-[400px] flex flex-col">
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 h-[400px] flex flex-col shadow-2xl shadow-green-500/5">
             <div className="flex items-center gap-2 mb-4 text-zinc-500 text-xs uppercase font-bold tracking-widest">
               <Terminal size={14} />
               Live Security Feed
@@ -99,7 +111,7 @@ function App() {
               {logs.length > 0 ? logs.map((log, i) => (
                 <LogEntry key={i} time={log.time} msg={log.msg} type={log.type} />
               )) : (
-                <div className="text-zinc-700 animate-pulse italic">Waiting for incoming data...</div>
+                <div className="text-zinc-700 animate-pulse italic">Awaiting public secure tunnel...</div>
               )}
             </div>
           </div>
@@ -120,7 +132,7 @@ function App() {
         </main>
 
         <footer className="w-full max-w-6xl mt-12 text-center text-zinc-600 text-[10px] uppercase tracking-widest pb-8">
-          Built for User Freedom • No Logs Kept • Decentralized Infrastructure
+          Built for User Freedom • No Logs Kept • End-to-End Encryption
         </footer>
       </div>
     </div>
@@ -136,7 +148,7 @@ function StatCard({ icon, label, value, color }) {
   };
 
   return (
-    <div className={`p-6 rounded-xl border ${colors[color]} flex flex-col justify-between h-32 transition-all hover:scale-[1.02]`}>
+    <div className={`p-6 rounded-xl border ${colors[color]} flex flex-col justify-between h-32 transition-all hover:scale-[1.02] shadow-lg shadow-black`}>
       <div className="flex justify-between items-start">
         <div className="opacity-80">{icon}</div>
         <span className="text-3xl font-black">{value}</span>
@@ -154,9 +166,9 @@ function LogEntry({ time, msg, type }) {
     danger: 'text-red-500',
   };
   return (
-    <div className="flex gap-3 font-mono">
+    <div className="flex gap-3 font-mono leading-tight">
       <span className="text-zinc-700">[{time}]</span>
-      <span className={colors[type]}>{msg}</span>
+      <span className={`${colors[type]} break-all`}>{msg}</span>
     </div>
   );
 }
