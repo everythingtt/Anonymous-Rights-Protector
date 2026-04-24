@@ -5,9 +5,6 @@ import { io } from 'socket.io-client';
 import banner from './assets/anonymous-banner.jpg';
 import emblem from './assets/anonymous-emblem.png';
 
-// Fallback for local testing
-const LOCAL_BACKEND = "http://localhost:3000";
-
 function App() {
   const [status, setStatus] = useState('Connecting...');
   const [stats, setStats] = useState({
@@ -21,31 +18,36 @@ function App() {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    // 1. Try to determine where to connect
-    // If we are on localhost, connect to current origin
-    // If we are on GitHub Pages, we need to know the Ngrok URL
-    // We'll use a simple "discovery" mechanism: check if we're on local or remote
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     
     let socketInstance;
 
     if (isLocal) {
       console.log("Local environment detected. Connecting to origin.");
-      socketInstance = io(window.location.origin, { path: '/socket.io/' });
+      socketInstance = io(window.location.origin, { 
+        path: '/socket.io/',
+        extraHeaders: {
+          "ngrok-skip-browser-warning": "true"
+        }
+      });
       setupSocket(socketInstance);
     } else {
-      // On GitHub Pages, we prompt for the Ngrok URL or look for it in localStorage
       const savedUrl = localStorage.getItem('ANONY_NGROK_URL');
       if (savedUrl) {
         console.log("Connecting to saved Ngrok URL:", savedUrl);
-        socketInstance = io(savedUrl, { path: '/socket.io/' });
+        socketInstance = io(savedUrl, { 
+          path: '/socket.io/',
+          extraHeaders: {
+            "ngrok-skip-browser-warning": "true"
+          }
+        });
         setupSocket(socketInstance);
         setPublicUrl(savedUrl);
       } else {
         setStatus('Configuration Required');
         addLog({ 
           time: new Date().toLocaleTimeString(), 
-          msg: 'GitHub Pages detected. Please provide your public Ngrok URL from your local terminal to sync data.', 
+          msg: 'GitHub Pages detected. Please sync with your local tunnel to see live data.', 
           type: 'warning' 
         });
       }
@@ -55,8 +57,13 @@ function App() {
       s.on('connect', () => {
         setStatus('Online');
         addLog({ time: new Date().toLocaleTimeString(), msg: 'Secure Tunnel Established', type: 'success' });
-        // Save for next session if successful
         if (!isLocal) localStorage.setItem('ANONY_NGROK_URL', s.io.uri);
+      });
+
+      s.on('connect_error', (err) => {
+        console.error("Connection Error:", err);
+        setStatus('Connection Error');
+        addLog({ time: new Date().toLocaleTimeString(), msg: `Handshake failed: ${err.message}`, type: 'danger' });
       });
 
       s.on('disconnect', () => {
@@ -85,18 +92,28 @@ function App() {
   };
 
   const handleConnectRemote = () => {
-    const url = prompt("Enter your Public Dashboard API URL (from your local start.js logs):");
+    const url = prompt("Enter your Public Dashboard API URL (e.g., https://...ngrok-free.dev):");
     if (url) {
       if (socket) socket.disconnect();
-      const s = io(url, { path: '/socket.io/' });
+      const s = io(url, { 
+        path: '/socket.io/',
+        extraHeaders: {
+          "ngrok-skip-browser-warning": "true"
+        }
+      });
       setSocket(s);
-      // Logic from setupSocket repeated here for simplicity in this manual override
+      
       s.on('connect', () => {
         setStatus('Online');
         setPublicUrl(url);
         localStorage.setItem('ANONY_NGROK_URL', url);
         addLog({ time: new Date().toLocaleTimeString(), msg: 'Manual Tunnel Established', type: 'success' });
       });
+      
+      s.on('connect_error', (err) => {
+        addLog({ time: new Date().toLocaleTimeString(), msg: `Manual sync failed: ${err.message}`, type: 'danger' });
+      });
+
       s.on('stats', setStats);
       s.on('log', addLog);
     }
@@ -104,7 +121,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-black text-white font-mono flex flex-col items-center">
-      {/* Hero Banner */}
       <div className="w-full h-48 md:h-64 overflow-hidden relative border-b border-green-900/30">
         <img src={banner} alt="Anonymous Banner" className="w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
@@ -114,7 +130,6 @@ function App() {
       </div>
 
       <div className="w-full max-w-6xl p-4 md:p-8">
-        {/* Header */}
         <header className="flex justify-between items-center mb-12 border-b border-green-900/30 pb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-500/10 rounded-lg">
@@ -141,7 +156,6 @@ function App() {
         </header>
 
         <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Stats Section */}
           <div className="md:col-span-2 grid grid-cols-2 gap-4">
             <StatCard icon={<Shield />} label="Messages Protected" value={stats.protected} color="green" />
             <StatCard icon={<Lock />} label="Privacy Proxied" value={stats.proxied} color="blue" />
@@ -149,7 +163,6 @@ function App() {
             <StatCard icon={<Users />} label="Active Users" value={stats.users} color="purple" />
           </div>
 
-          {/* Terminal/Logs */}
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 h-[400px] flex flex-col shadow-2xl shadow-green-500/5">
             <div className="flex items-center gap-2 mb-4 text-zinc-500 text-xs uppercase font-bold tracking-widest">
               <Terminal size={14} />
@@ -164,7 +177,6 @@ function App() {
             </div>
           </div>
 
-          {/* Action Panel */}
           <div className="md:col-span-3 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 mt-6">
             <h2 className="text-lg font-bold mb-4 flex items-center gap-2 uppercase">
               <Activity className="text-green-500" />
